@@ -89,10 +89,10 @@ class AppDiagnostics():
                     
                     #generate the directory
                     os.makedirs(f'data/{name}/', exist_ok=True)
+                    os.makedirs(f'images/{name}/', exist_ok=True)
 
                     #download a small amount of image data
                     download_manager = DownloadManager([name])
-                    print(self.channels[name])
                     download_manager.specify_channels([self.channels[name]])
                     download_manager.specify_start_end(datetime(2023, 1, 1, 0, 0), datetime(2023, 1, 1, 0, 10), 1)
 
@@ -107,11 +107,8 @@ class AppDiagnostics():
                         print(f'Failed to download data.')
                         print(e)                            
                     
-                    try:
-                        image_processor.create_alpha_masks(name)
-                    except Exception as e:
-                        print(f'Failed to create alpha masks.')
-                        print(e)
+                    image_processor.create_alpha_masks(name)
+
 
     def _attempt_fix_blending_masks(self, resolution):
         if len(self.missing_blending_mask_files) > 0:

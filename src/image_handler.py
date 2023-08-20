@@ -240,15 +240,15 @@ class ImageBlender():
             for triangle in triangles:
                 pixels, n_pixels, pixel_weights = self.get_pixels_for_triangle(triangle, tex_coords, n_pixel_coords, weights)
                 
-                triangle_pixels.extend(pixels)
-                n_triangle_pixels.extend(n_pixels)
-                triangle_weights.extend(pixel_weights)
+                triangle_pixels.append(pixels)
+                n_triangle_pixels.append(n_pixels)
+                triangle_weights.append(pixel_weights)
                 
                 pbar.update(1)
         
-        self.triangulated_pixels = np.array(triangle_pixels)
-        self.triangulated_n_pixels = np.array(n_triangle_pixels)
-        self.triangulated_weights = np.array(triangle_weights)
+        self.triangulated_pixels = np.concatenate(triangle_pixels)
+        self.triangulated_n_pixels = np.concatenate(n_triangle_pixels)
+        self.triangulated_weights = np.concatenate(triangle_weights)
 
     def get_pixels_for_triangle(self, triangle, pixel_coords, n_pixel_coords, vertex_weights) -> list:
         #get the vertices of the triangle

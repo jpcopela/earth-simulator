@@ -15,8 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 
 #eumetsat credentials
-key = '<your_key>'
-secret = '{<your_secret>}'
+key = 'a2KSFPSidmgngwaV0KtVUeWop80a'
+secret = 'Hf7tk5qlevRY5dTjk9PCKFmHrVAa'
 
 #DownloadManager class has attributes for the satellites to be downloaded, the start and end times,
 #and the interval between downloads. These are initialized by the user using the GUI.

@@ -109,6 +109,8 @@ class ImageProcessor():
     def _find_image_timestamps(self, satellite : str) -> list:
         data_filepath = self.project_folder + f'data/{satellite}/'
         files = glob(data_filepath + '*')
+
+        print(data_filepath, files)
         
         if files:
             reader = self._get_satpy_kwargs(satellite)['reader']
@@ -125,7 +127,7 @@ class ImageProcessor():
             #sort
             file_timestamps.sort()
             deltas = np.diff(file_timestamps).tolist()
-            deltas.append(timedelta(minutes=1)) #add a last element so we can catch the last timestamp
+            deltas.append(timedelta(minutes=600)) #add a last element so we can catch the last timestamp
 
             #collect files for each timestamp
             time_ordered_files = [find_files_and_readers(base_dir=data_filepath, reader=reader,
