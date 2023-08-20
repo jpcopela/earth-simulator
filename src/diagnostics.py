@@ -89,7 +89,7 @@ class AppDiagnostics():
                     
                     #generate the directory
                     os.makedirs(f'data/{name}/', exist_ok=True)
-                    os.makedirs(f'images/{name}/', exist_ok=True)
+                    os.makedirs(f'images/{name}/{resolution}', exist_ok=True)
 
                     #download a small amount of image data
                     download_manager = DownloadManager([name])
@@ -107,7 +107,10 @@ class AppDiagnostics():
                         print(f'Failed to download data.')
                         print(e)                            
                     
-                    image_processor.create_alpha_masks(name)
+                    try:
+                        image_processor.create_alpha_masks(name)
+                    except Exception as e:
+                        print(f'Failed to generate alpha mask for {name}.')
 
 
     def _attempt_fix_blending_masks(self, resolution):
@@ -141,11 +144,13 @@ class AppDiagnostics():
                         image_processor.generate_images_from_data(satellite, 'tif')
                         image_processor.generate_images_from_data(neighbor, 'tif')
                     except Exception as e:
-                        print(f'Failed to create blending mask.')
+                        print(f'Failed to generate tif image for {satellite} or {neighbor}.')
                         print(e)
                     
-                    ImageBlender(satellite, neighbor, res)
-
+                    try:
+                        ImageBlender(satellite, neighbor, res)
+                    except Exception as e:
+                        print(f'Failed to generate blending mask for {satellite} and {neighbor} overlap.')
 
 if __name__ == '__main__':
     app_diagnostics = AppDiagnostics(attempt_fix=True, resolutions=['low_res', 'medium_res', 'high_res'])

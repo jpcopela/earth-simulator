@@ -109,8 +109,6 @@ class ImageProcessor():
     def _find_image_timestamps(self, satellite : str) -> list:
         data_filepath = self.project_folder + f'data/{satellite}/'
         files = glob(data_filepath + '*')
-
-        print(data_filepath, files)
         
         if files:
             reader = self._get_satpy_kwargs(satellite)['reader']
@@ -195,24 +193,23 @@ class ImageProcessor():
 
                     pbar.update(1)
 
-    #this method generates only the scene
+    #this method generates only a scene from the files detected.
     def _generate_scene_from_data(self, satellite : str) -> None:
         with dask.config.set({"array.chunk-size" : "12MiB"}):
             kwargs = self._get_satpy_kwargs(satellite)
             composites = self.composites[satellite]
+            files = glob(f'data/{satellite}/*')
+            print(files)
 
-            time_ordered_files = self._find_image_timestamps(satellite)
+            scn = Scene(filenames=files, reader=kwargs['reader'])
 
-            for files in time_ordered_files:
-                scn = Scene(filenames=files, reader=kwargs['reader'])
-
-                for composite in composites:
-                    scn.load([composite], generate=False, upper_right_corner='NE')
-                
-                if (kwargs['resample_area'] == 'none'):
-                    kwargs['resample_area'] = scn.coarsest_area()
-                
-                self.scn = scn.resample(kwargs['resample_area'], resampler=kwargs['mode'], reduce_data=False)
+            for composite in composites:
+                scn.load([composite], generate=False, upper_right_corner='NE')
+            
+            if (kwargs['resample_area'] == 'none'):
+                kwargs['resample_area'] = scn.coarsest_area()
+            
+            self.scn = scn.resample(kwargs['resample_area'], resampler=kwargs['mode'], reduce_data=False)
 
     def _apply_alpha_masks(self):
         total_iterations = [files for satellite in self.filenames for files in self.filenames[satellite]]
