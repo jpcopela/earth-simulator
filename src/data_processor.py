@@ -161,7 +161,6 @@ class ImageProcessor():
             composites = self.composites[satellite]
 
             time_ordered_files = self._find_image_timestamps(satellite)
-            print(time_ordered_files)
 
             if (not time_ordered_files):
                 print(f'No data found for {satellite}.')
