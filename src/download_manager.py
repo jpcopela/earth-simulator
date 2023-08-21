@@ -6,7 +6,7 @@ import requests
 import shutil
 from glob import glob
 from math import floor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
@@ -36,7 +36,7 @@ class DownloadManager():
                     bucket = 'noaa-goes16'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'goes_west':
-                    bucket = 'noaa-goes18'
+                    bucket = 'noaa-goes17'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'himawari':
                     bucket = 'noaa-himawari9'
@@ -121,7 +121,7 @@ class DownloadManager():
 
     def specify_start_end(self, start : datetime, end : datetime, interval_minutes : int) -> None:
         #data are generally stored in 10 minute intervals
-        times = [start + timedelta(minutes=i) for i in range(0, round((end - start).total_seconds()) // 60, round(interval_minutes))]
+        times = [(start + timedelta(minutes=i)) for i in range(0, round((end - start).total_seconds()) // 60, round(interval_minutes))]
         self.floored_times = [i - timedelta(minutes=i.minute % 10, seconds=i.second, microseconds=i.microsecond) for i in times]
         self.start, self.end, self.interval = start, end, interval_minutes
 
@@ -133,62 +133,14 @@ class DownloadManager():
         if (self.satellites and self.channels and self.start and self.end and self.interval):
             for i in range(len(self.satellites)):
                 if 'goes' in self.satellites[i]:
-                    timestamps = self._get_goes_timestamps(self.satellites[i])
-                    self._download_aws_data(self.satellites[i], timestamps, self.channels[i])
+                    self._download_aws_data(self.satellites[i], self.channels[i])
                 elif 'himawari' in self.satellites[i]:
-                    timestamps = self._get_himawari_timestamps(self.satellites[i])
-                    self._download_aws_data(self.satellites[i], timestamps, self.channels[i])
+                    self._download_aws_data(self.satellites[i], self.channels[i])
                 elif 'meteosat' in self.satellites[i]:
                     timestamps = self._get_meteosat_timestamps(self.satellites[i])
                     self._download_meteosat_data(self.satellites[i], timestamps)
         else:
             print("Satellite, time, and channel information must be submitted before downloading.")
-            
-    def _get_goes_timestamps(self, satellite):
-        bucket = self.buckets[self.satellites.index(satellite)]
-        aws_prefix = self.aws_prefixes[self.satellites.index(satellite)]
-        test_timestamps = [i.strftime(f'{aws_prefix}/%Y/%j/%H/') for i in self.floored_times]
-        remove_timestamp = []
-        remove_times = []
-
-        #this is the 'lossy' method that will abandon the entire timestamp if data for any 
-        #satellite is not present
-        for i in range(len(self.floored_times)):
-            response = self.client.list_objects_v2(Bucket=bucket, Prefix=test_timestamps[i])
-            
-            if (not response.get('Contents', [])):
-                remove_times.append(self.floored_times[i])
-                print(f'No data found for {satellite} for timestamp: {test_timestamps[i]}')
-                remove_timestamp.append(test_timestamps[i])
-
-        #remove duplicates
-        out_timestamps = list(dict.fromkeys([i for i in test_timestamps if i not in remove_timestamp])) #remove duplicates
-        self.floored_times = list(dict.fromkeys([i for i in self.floored_times if i not in remove_times])) #remove duplicates
-
-        return out_timestamps
-
-    def _get_himawari_timestamps(self, satellite):
-        #himawari data are stored in folders according to the following file structure:
-        #bucket/year/month/day/<four digit 24 hour UTC hour + minute>/
-        #e.g. noaa-himawari9/AHI-L1b-FLDK/2023/08/07/1600/<every file for the 10 minute interval>
-        bucket = self.buckets[self.satellites.index(satellite)]
-        aws_prefix = self.aws_prefixes[self.satellites.index(satellite)]
-        test_timestamps = [i.strftime(f'{aws_prefix}/%Y/%m/%d/%H%M/') for i in self.floored_times]
-        remove_timestamp = []
-        remove_times = []
-
-        for i in range(len(self.floored_times)):
-            response = self.client.list_objects_v2(Bucket=bucket, Prefix=test_timestamps[i])
-            
-            if (not response.get('Contents', [])):
-                remove_times.append(self.floored_times[i])
-                print(f'No data found for {satellite} for timestamp: {test_timestamps[i]}')
-                remove_timestamp.append(test_timestamps[i])
-
-        out_timestamps = list(dict.fromkeys([i for i in test_timestamps if i not in remove_timestamp])) #remove duplicates
-        self.floored_times = list(dict.fromkeys([i for i in self.floored_times if i not in remove_times])) #remove duplicates
-
-        return out_timestamps
         
     def _get_meteosat_timestamps(self, satellite):
         #meteosat data uses the eumetsat API, so we can just find the files for our time interval
@@ -232,20 +184,17 @@ class DownloadManager():
 
         return products
 
-    def _download_aws_data(self, satellite, timestamps, channels):
+    def _download_aws_data(self, satellite, channels):
         data_file_path = self.project_folder + f'data/{satellite}/'
         existing_data_files = glob(data_file_path + '*')
         files = []
         filenames = []
         bucket = self.buckets[self.satellites.index(satellite)]
 
-        for channel in channels:
-            channel_files = self._get_channel_files(timestamps, satellite, channel)
-            files.extend(channel_files)
+        files = self._get_channel_files(satellite, channels)
         
         filenames = [i.split('/')[-1] for i in files]
         local_ch_filenames = [data_file_path + i for i in filenames] #must account for bz2 decompression changing file name
-        print(local_ch_filenames)
 
         remove_files = []
 
@@ -259,7 +208,7 @@ class DownloadManager():
                         self.client.download_file(bucket, files[i], local_ch_filenames[i])
                     except:
                         print(f'Failed to download {files[i]}')
-                        remove_files.append(local_ch_filenames[i])
+                        #remove_files.append(local_ch_filenames[i])
                 
                 else:
                     print(f'{filename} already exists.')
@@ -295,16 +244,34 @@ class DownloadManager():
 
                 pbar.update(1)
 
-    def _get_channel_files(self, timestamps, satellite, channel):
+    def _get_channel_files(self, satellite, channels):
         channel_files = []
         bucket = self.buckets[self.satellites.index(satellite)]
+        aws_prefix = self.aws_prefixes[self.satellites.index(satellite)]
 
-        for i in range(len(timestamps)):
-            response = self.client.list_objects_v2(Bucket=bucket, Prefix=timestamps[i])
+        for time in self.floored_times:
+            if ('goes' in satellite):
+                #goes data beginning at <Hour>:00 is stored in the previous hour's folder
+                if (time.strftime('%M') == '00'):
+                    corrected_time = time - timedelta(minutes=5) #subtract 5 minutes so we are in the previous hour now
+                    timestamp = corrected_time.strftime(f'{aws_prefix}/%Y/%j/%H/')
+                else:
+                    timestamp = time.strftime(f'{aws_prefix}/%Y/%j/%H/')
 
-            for content in response.get('Contents', []):
-                if (channel in content['Key'] and self.floored_times[i].strftime('%H%M') in content['Key']):
-                    channel_files.append(content['Key'])
+            elif ('himawari' in satellite):
+                timestamp = time.strftime(f'{aws_prefix}/%Y/%m/%H/%M/')
+
+            for channel in channels:
+                    response = self.client.list_objects_v2(Bucket=bucket, Prefix=timestamp)
+
+                    for content in response.get('Contents', []):
+                        if ('himawari' in satellite):
+                            if (channel in content['Key'] and time.strftime('%H%M') in content['Key']):
+                                channel_files.append(content['Key'])
+                        
+                        elif ('goes' in satellite):
+                            if (channel in content['Key'] and (time >= content['LastModified'] - timedelta(minutes=2) and time <= content['LastModified'] + timedelta(minutes=2))):
+                                channel_files.append(content['Key'])
 
         return channel_files
 
