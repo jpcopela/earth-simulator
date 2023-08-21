@@ -193,7 +193,7 @@ class ImageBlender():
         n_dists = ImageBlender._haversine_distance(sat_lat0, neighbor_lon0, v_lats, v_lons)
 
         #clip max distance to center
-        sat_dist = ImageBlender._haversine_distance(sat_lat0, sat_lon0, sat_lat0, neighbor_lon0)
+        sat_dist = ImageBlender._haversine_distance(sat_lat0, sat_lon0, sat_lat0, np.array([neighbor_lon0]))[0]
         min_distance = np.min(np.concatenate([my_dists, n_dists]))
 
         #where the distance is less than the min distance, set the distance to the min distance
@@ -212,14 +212,27 @@ class ImageBlender():
 
         self.vertex_weights = ratio
 
-    def _haversine_distance(lat1, lon1, lat2, lon2):
+    def _haversine_distance(lat1 : float, lon1 : float, lat2 : np.ndarray, lon2 : np.ndarray) -> np.ndarray:
+        #handle the -180 180 degree boundary
+        #since we converted to 0-2pi, the critical values become pi/2 and 3pi/2
+        #if the first point is below 90 degrees, convert any lon2 points less than -90 degrees to negative values from 0
+        if (lon1 < pi / 2.0):
+            lon2[lon2 > (3 * pi) / 2.0] = [-((2 * pi) - i) for i in lon2[lon2 > (3 * pi) / 2.0]]
+            print(lon2[lon2 < -pi / 2.0])
+
+        #if the first point is less than -90 degrees, convert these points to negative values from 0 along with all lon2 points that need
+        #conversion too
+        if (lon1 > (3 * pi) / 2.0):
+            lon1 = -((2 * pi) - lon1) #distance to zero of lon1
+            lon2[lon2 > ((3 * pi) / 2.0)] = [-((2 * pi) - i) for i in lon2[lon2 > ((3 * pi) / 2.0)]]
+
         dlat = lat2 - lat1
         dlon = lon2 - lon1
         a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
         c = 2 * np.arcsin(np.sqrt(a))
         r = 1.0  # dummy value
 
-        return abs(dlon) * r #only return the longitudinal distance for now
+        return np.array(abs(dlon) * r) #only return the longitudinal distance for now
 
     #this function uses a lot of memory, so it may actually kill your computer for a moment if you have less
     # than 16 GB of memory and you try to use it on high res (>11,000x11,000 px) images.
@@ -314,3 +327,19 @@ class ImageBlender():
 
         print('Saving blending image...')
         np.save(f'images/blending_masks/{self.resolution}/{self.satellite}_{self.adjacent_satellite}.npy', image)
+
+#recreate the himawari blending mask
+satellite = 'goes_west'
+neighbor = 'goes_east'
+blender = ImageBlender(satellite, neighbor, 'medium_res')
+
+
+#create a new function to plot the weight values of my blending mask as an image
+def plot_blending_mask(satellite1, satellite2, resolution):
+    mask = np.load(f'images/blending_masks/{resolution}/{satellite1}_{satellite2}.npy')
+    image = mask[:, :, 0]
+
+    plt.imshow(image, cmap='plasma')
+    plt.show()
+
+plot_blending_mask(satellite, neighbor, 'medium_res')
