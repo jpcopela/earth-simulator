@@ -332,14 +332,3 @@ class ImageBlender():
 satellite = 'goes_west'
 neighbor = 'goes_east'
 blender = ImageBlender(satellite, neighbor, 'medium_res')
-
-
-#create a new function to plot the weight values of my blending mask as an image
-def plot_blending_mask(satellite1, satellite2, resolution):
-    mask = np.load(f'images/blending_masks/{resolution}/{satellite1}_{satellite2}.npy')
-    image = mask[:, :, 0]
-
-    plt.imshow(image, cmap='plasma')
-    plt.show()
-
-plot_blending_mask(satellite, neighbor, 'medium_res')
