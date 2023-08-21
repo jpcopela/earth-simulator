@@ -39,7 +39,7 @@ class DownloadManager():
                     bucket = 'noaa-goes17'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'himawari':
-                    bucket = 'noaa-himawari9'
+                    bucket = 'noaa-himawari8'
                     aws_prefix = 'AHI-L1b-FLDK'
                 case 'meteosat_9':
                     bucket = None
@@ -132,9 +132,7 @@ class DownloadManager():
 
         if (self.satellites and self.channels and self.start and self.end and self.interval):
             for i in range(len(self.satellites)):
-                if 'goes' in self.satellites[i]:
-                    self._download_aws_data(self.satellites[i], self.channels[i])
-                elif 'himawari' in self.satellites[i]:
+                if ('goes' in self.satellites[i] or 'himawari' in self.satellites[i]):
                     self._download_aws_data(self.satellites[i], self.channels[i])
                 elif 'meteosat' in self.satellites[i]:
                     timestamps = self._get_meteosat_timestamps(self.satellites[i])
@@ -175,7 +173,6 @@ class DownloadManager():
             #get the products for the time interval and select the first one
             #for some reason this wasn't working as it's supposed to until I added the native_name call
             product = selected_collection.search(dtstart=start, dtend=end).first()
-            native_name = f'{product}.nat'
 
             products.append(product)
 
@@ -187,12 +184,9 @@ class DownloadManager():
     def _download_aws_data(self, satellite, channels):
         data_file_path = self.project_folder + f'data/{satellite}/'
         existing_data_files = glob(data_file_path + '*')
-        files = []
-        filenames = []
         bucket = self.buckets[self.satellites.index(satellite)]
 
-        files = self._get_channel_files(satellite, channels)
-        
+        files = self._get_channel_files(satellite, channels)        
         filenames = [i.split('/')[-1] for i in files]
         local_ch_filenames = [data_file_path + i for i in filenames] #must account for bz2 decompression changing file name
 
@@ -249,19 +243,20 @@ class DownloadManager():
         bucket = self.buckets[self.satellites.index(satellite)]
         aws_prefix = self.aws_prefixes[self.satellites.index(satellite)]
 
-        for time in self.floored_times:
-            if ('goes' in satellite):
-                #goes data beginning at <Hour>:00 is stored in the previous hour's folder
-                if (time.strftime('%M') == '00'):
-                    corrected_time = time - timedelta(minutes=5) #subtract 5 minutes so we are in the previous hour now
-                    timestamp = corrected_time.strftime(f'{aws_prefix}/%Y/%j/%H/')
-                else:
-                    timestamp = time.strftime(f'{aws_prefix}/%Y/%j/%H/')
+        with tqdm(total=len(self.floored_times), desc=f'Gathering {satellite} files.') as pbar:
+            for time in self.floored_times:
+                if ('goes' in satellite):
+                    #goes data beginning at <Hour>:00 is stored in the previous hour's folder
+                    if (time.strftime('%M') == '00'):
+                        corrected_time = time - timedelta(minutes=5) #subtract 5 minutes so we are in the previous hour now
+                        timestamp = corrected_time.strftime(f'{aws_prefix}/%Y/%j/%H/')
+                    else:
+                        timestamp = time.strftime(f'{aws_prefix}/%Y/%j/%H/')
 
-            elif ('himawari' in satellite):
-                timestamp = time.strftime(f'{aws_prefix}/%Y/%m/%H/%M/')
+                elif ('himawari' in satellite):
+                    timestamp = time.strftime(f'{aws_prefix}/%Y/%m/%d/%H%M/')
 
-            for channel in channels:
+                for channel in channels:
                     response = self.client.list_objects_v2(Bucket=bucket, Prefix=timestamp)
 
                     for content in response.get('Contents', []):
@@ -272,6 +267,8 @@ class DownloadManager():
                         elif ('goes' in satellite):
                             if (channel in content['Key'] and (time >= content['LastModified'] - timedelta(minutes=2) and time <= content['LastModified'] + timedelta(minutes=2))):
                                 channel_files.append(content['Key'])
+                
+                pbar.update()
 
         return channel_files
 
