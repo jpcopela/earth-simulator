@@ -1,5 +1,8 @@
-# earth-simulator
-Application for downloading,  processing, and viewing geostationary remote sensing data in three dimensions
+# Earth Simulator
+Python application for downloading,  processing, and viewing geostationary remote sensing data in three dimensions
+
+![Alt Text](https://github.com/jackcop/earth-simulator/blob/main/images/thumbnail.gif)
+
 
 # Dependencies
 It is recommended to create a virtual environment in the project folder. Dependencies can be installed using pip:  
