@@ -4,12 +4,25 @@ from OpenGL.GL import *
 from src.opengl_helper import GLInstance  # Replace with your OpenGL helper class
 import time
 
+import sys
+
+import numpy as np
+
+from glob import glob
+from datetime import datetime
+
 #the canvas that will be used to display the OpenGL scene
 class OpenGLCanvas(glcanvas.GLCanvas):
     def __init__(self, parent, captured_output=None):
         attribs = (wx.glcanvas.WX_GL_RGBA, wx.glcanvas.WX_GL_DOUBLEBUFFER, wx.glcanvas.WX_GL_DEPTH_SIZE, 24)
         style = wx.WANTS_CHARS | wx.NO_FULL_REPAINT_ON_RESIZE
         super(OpenGLCanvas, self).__init__(parent, attribList=attribs, style=style)
+
+        self.width = self.GetClientSize()[0]
+        self.height = self.GetClientSize()[1]
+
+        sys.stdout = captured_output
+        sys.stderr = captured_output
 
         self.context = wx.glcanvas.GLContext(self)
         self.gl_initialized = False
@@ -21,6 +34,8 @@ class OpenGLCanvas(glcanvas.GLCanvas):
         self.elapsed = 0.0
         self.prev = 0.0
         self.delta = 0.0
+
+        self.timelapse_counter = 0
 
         #used for rotating the camera
         self.last_mouse_pos = None
@@ -58,6 +73,47 @@ class OpenGLCanvas(glcanvas.GLCanvas):
 
     def handle_slider_value_changed(self, value : int):
         self.slider_value = value
+
+    def handle_timelapse_click(self, satellites, project_folder, resolution):
+        print('Creating timelapse...')
+        #calculate image pairs based on timestamps
+        timestamp_format = '%Y%m%d_%H%M'
+        image_files = []
+
+        for satellite in satellites:
+            path = project_folder + f'/images/{satellite}/{resolution}/'
+            images = glob(path + '*.png')
+            image_files.extend(images)
+
+        timestamps = []
+
+        for file in image_files:
+            date_str = file.split('_')[-2:]
+            date_str = str(date_str[0] + '_' + date_str[1]).split('.')[0]
+            date = datetime.strptime(date_str, timestamp_format)
+            timestamps.append(date)
+        
+        timestamps = sorted(timestamps) #sort the timestamps and convert them to a string so we can sort the image files
+        ts_str = [date.strftime(timestamp_format) for date in timestamps]
+        ts_str = list(dict.fromkeys(ts_str)) #remove duplicates
+        image_groups = []
+
+        for timestamp in ts_str:
+            group = [i for i in image_files if timestamp in i]
+            image_groups.append(tuple(group))
+
+        self.SetCurrent(self.context)
+        for i in range(len(image_groups)):
+            for image in image_groups[i]:
+                for satellite in satellites:
+                    if satellite in image:
+                        self.gl.remove_texture_images(satellite)
+                        self.gl.load_texture_images(satellite, [image])
+                    
+            self.paintGL()
+            self.gl.capture_image(self.width, self.height, self.timelapse_counter, i, project_folder)
+
+        self.timelapse_counter += 1
 
     #methods for interacting with the OpenGL scene
     def _on_key_down(self, event):
@@ -133,6 +189,9 @@ class OpenGLCanvas(glcanvas.GLCanvas):
         self.camera.aspect = width / height
         self.camera.adjust_zoom(0.0)
 
+        self.width = width
+        self.height = height
+
     def _on_paint(self, event):
         dc = wx.PaintDC(self)
         self.SetCurrent(self.context)
@@ -174,7 +233,7 @@ class OpenGLCanvas(glcanvas.GLCanvas):
         #initialize OpenGL
         self.SetCurrent(self.context)
 
-        glClearColor(0.0, 0.0, 0.0, 1.0)
+        glClearColor(0.0725, 0.025, 0.05, 1.0)
         glEnable(GL_DEPTH_TEST)
         glDisable(GL_BLEND)
         glDisable(GL_CULL_FACE)

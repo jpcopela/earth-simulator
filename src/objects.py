@@ -30,6 +30,7 @@ class Object():
             np.save(f'data/vertex_coords/{self.satellite}_indices.npy', self.indices)
 
         self.image_textures = Texture(self.satellite, ['images/default_image.png'])
+        self.tbos = self.image_textures.tbos
         self.textures = self.image_textures.textures
         self.texture_coords = self.image_textures.tile_tex_coords
         self.num_layers = self.image_textures.num_layers
@@ -57,6 +58,7 @@ class Object():
         return mesh, indices
     
     def load_textures(self, files) -> None:
+        print(files)
         self.image_textures = Texture(self.satellite, files)
         self.tbos = self.image_textures.tbos
         self.textures = self.image_textures.textures                #list of texture arrays for each tile
@@ -71,24 +73,13 @@ class Object():
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glBufferData(GL_ARRAY_BUFFER, self.vertices, GL_STATIC_DRAW)
 
-        if (glGetError() != GL_NO_ERROR):
-            raise ValueError(f'Failed to load {self.satellite} vertex information.')
-
         ebo = glGenBuffers(1)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.indices, GL_STATIC_DRAW)
 
-        if (glGetError() != GL_NO_ERROR):
-            raise ValueError(f'Failed to load {self.satellite} vertex information.')
-
         #position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
         glEnableVertexAttribArray(0)
-
-        self.tbos = self.image_textures.tbos
-
-        if (glGetError() != GL_NO_ERROR):
-            raise ValueError(f'Failed to load {self.satellite} vertex information.')
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
@@ -115,9 +106,8 @@ class Object():
 #the Texture class should only use images selected by the user
 #class to handle texture loading, binding, and tiling
 class Texture():
-    def __init__(self, satellite : str, files : str) -> None:
+    def __init__(self, satellite : str, files : list) -> None:
         self.satellite = satellite
-        resolution = self._detect_resolution(files)
         image_files = files
         
         if (len(image_files) > 1):
@@ -137,25 +127,6 @@ class Texture():
         self._init_textures()
         self._generate_texture_buffers()
 
-    def _detect_resolution(self, files : list) -> str:
-        resolutions = ['low_res', 'medium_res', 'high_res']
-        image_res = []
-
-        if (not ['default_image.png' in i for i in files]):
-            for res in resolutions:
-                files = [file for file in files if res in file]
-                image_res.extend(files)
-
-            if (not np.all(image_res == image_res[0])):
-                raise ValueError('Images must be the same resolution.')
-            elif (not image_res):
-                raise ValueError('No images selected.')
-            
-        else:
-            return 'low_res'
-        
-        return image_res[0]
-
     #return a timeseries ordered list of Image objects 
     def _get_timeseries_images(self, image_files : list) -> list: #returns an ordered list of Image objects
         timestamp_format = '%Y%m%d_%H%M'
@@ -169,7 +140,7 @@ class Texture():
         
         timestamps = sorted(timestamps)
         ts_str = [date.strftime(timestamp_format) for date in timestamps]
-        image_files = [i for j in ts_str for i in image_files if j in i]
+        image_files = [i for i in image_files for j in ts_str if j in i]
 
         return [Image.open(file) for file in image_files]
 

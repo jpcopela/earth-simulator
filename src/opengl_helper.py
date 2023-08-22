@@ -6,7 +6,7 @@ from src.camera import Camera
 from src.objects import Object
 
 import numpy as np
-import matplotlib.pyplot as plt
+import os
 
 from PIL import Image
 
@@ -42,4 +42,20 @@ class GLInstance():
     #remove the active texture images
     def remove_texture_images(self, satellite : str) -> None:
         self.satellites[satellite].clear_images()
+
+    def capture_image(self, width, height, timelapse_counter, image_index, project_folder) -> None:
+        os.makedirs(project_folder + f'/images/timelapses/timelapse_{timelapse_counter}', exist_ok=True)
+
+        #data = glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE)
+        #use glReadPixels but have the image be flipped
+        data = glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE)
+        image_array = np.frombuffer(data, dtype=np.uint8)
+
+        # Reshape the array to match the captured image dimensions and flip vertically
+        image_array = image_array.reshape(height, width, 4)
+        flipped_image_array = np.flipud(image_array)
+
+        # Convert the numpy array back to an image using PIL
+        flipped_image = Image.fromarray(flipped_image_array)
+        flipped_image.save(project_folder + f'/images/timelapses/timelapse_{timelapse_counter}/{image_index}.png')
 

@@ -34,6 +34,7 @@ class MainWindow(wx.Frame):
         self.sidebar.Bind(SidebarWidget.EVT_SATELLITE_TOGGLE, self.on_satellite_toggle)
         self.sidebar.Bind(SidebarWidget.EVT_IMAGE_SELECTION, self.on_images_selected)
         self.sidebar.Bind(SidebarWidget.EVT_SLIDER_CHANGE, self.on_slider_value_changed)
+        self.sidebar.Bind(SidebarWidget.EVT_TIMELAPSE_CLICK, self.on_timelapse_click)
 
         self.Centre()
         self.Show()
@@ -83,3 +84,9 @@ class MainWindow(wx.Frame):
     def on_slider_value_changed(self, event):
         value = event.value
         self.opengl_canvas.handle_slider_value_changed(value)
+
+    def on_timelapse_click(self, event):
+        satellites = event.satellites
+        folder = event.folder
+        resolution = event.resolution
+        self.opengl_canvas.handle_timelapse_click(satellites, folder, resolution)

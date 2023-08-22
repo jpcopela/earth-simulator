@@ -55,6 +55,13 @@ class ImageSelectionEvent(wx.PyCommandEvent):
         super().__init__(evtType, id)
         self.satellite = satellite
         self.files = files
+
+class TimelapseClickEvent(wx.PyCommandEvent):
+    def __init__(self, evtType, satellites : list, folder : str, resolution : str, id=wx.ID_ANY):
+        super().__init__(evtType, id)
+        self.satellites = satellites
+        self.folder = folder
+        self.resolution = resolution
         
 class SliderChangeEvent(wx.PyCommandEvent):
     def __init__(self, evtType, value : int, id=wx.ID_ANY):
@@ -70,6 +77,9 @@ class SidebarWidget(wx.Panel):
 
     myEVT_IMAGE_SELECTION = wx.NewEventType()
     EVT_IMAGE_SELECTION = wx.PyEventBinder(myEVT_IMAGE_SELECTION, 1)
+
+    myEVT_TIMELAPSE_CLICK = wx.NewEventType()
+    EVT_TIMELAPSE_CLICK = wx.PyEventBinder(myEVT_TIMELAPSE_CLICK, 1)
 
     myEVT_SLIDER_CHANGE = wx.NewEventType()
     EVT_SLIDER_CHANGE = wx.PyEventBinder(myEVT_SLIDER_CHANGE, 1)
@@ -131,11 +141,17 @@ class SidebarWidget(wx.Panel):
             self.file_select_buttons[satellite] = folder_button
 
         #slider for the timeline
+        slider_sizer = wx.BoxSizer(wx.HORIZONTAL)
         slider_label = wx.StaticText(self, label="Timeline:")
         self.slider = wx.Slider(self, value=0, minValue=0, maxValue=0)
         self.slider.Bind(wx.EVT_SCROLL, self.on_slider_change)
-        top_box.Add(slider_label, flag=wx.EXPAND|wx.ALL, border=10)
-        top_box.Add(self.slider, flag=wx.EXPAND|wx.ALL, border=0)
+        timelapse_button = wx.Button(self, label="Create Timelapse")
+        timelapse_button.Bind(wx.EVT_BUTTON, self.on_timelapse_click)
+        slider_sizer.Add(slider_label, flag=wx.EXPAND|wx.ALL, border=10)
+        slider_sizer.Add(self.slider, flag=wx.EXPAND|wx.ALL, border=0)
+        slider_sizer.Add(timelapse_button, flag=wx.EXPAND|wx.ALL, border=2)
+
+        top_box.Add(slider_sizer, flag=wx.EXPAND|wx.ALL, border=10)
 
         #bottom box for the image manager
         bottom_box = wx.BoxSizer(wx.VERTICAL)
@@ -323,6 +339,23 @@ class SidebarWidget(wx.Panel):
         self.slider_value = value
         #post an event to the OpenGL canvas
         wx.PostEvent(self, SliderChangeEvent(self.myEVT_SLIDER_CHANGE, value))
+
+    def on_timelapse_click(self, event):
+        names = self.get_satellite_names(self.selected_satellites)
+        resolution = self.resolution
+        dlg = wx.DirDialog(self, "Select or Create a Project Folder", style=wx.DD_DEFAULT_STYLE)
+
+        selected_folder = None
+        if dlg.ShowModal() == wx.ID_OK:
+            selected_folder = dlg.GetPath()
+        
+        dlg.Destroy()
+
+        #create the timelapses subdirectory
+        if (selected_folder is not None):
+            os.makedirs(selected_folder + '/images/timelapses', exist_ok=True)
+            #post an event to the OpenGL canvas
+            wx.PostEvent(self, TimelapseClickEvent(self.myEVT_TIMELAPSE_CLICK, names, selected_folder, resolution))
 
     def on_satellite_combo_change(self, event):
         self.update_composites()

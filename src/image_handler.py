@@ -327,8 +327,3 @@ class ImageBlender():
 
         print('Saving blending image...')
         np.save(f'images/blending_masks/{self.resolution}/{self.satellite}_{self.adjacent_satellite}.npy', image)
-
-#recreate the himawari blending mask
-satellite = 'goes_west'
-neighbor = 'goes_east'
-blender = ImageBlender(satellite, neighbor, 'medium_res')
