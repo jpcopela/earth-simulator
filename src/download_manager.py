@@ -36,10 +36,10 @@ class DownloadManager():
                     bucket = 'noaa-goes16'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'goes_west':
-                    bucket = 'noaa-goes17'
+                    bucket = 'noaa-goes18'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'himawari':
-                    bucket = 'noaa-himawari8'
+                    bucket = 'noaa-himawari9'
                     aws_prefix = 'AHI-L1b-FLDK'
                 case 'meteosat_9':
                     bucket = None
