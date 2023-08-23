@@ -405,12 +405,12 @@ class SidebarWidget(wx.Panel):
         wx_start_date = self.start_datetime_edit.GetValue()
         wx_start_time = self.start_time_edit.GetValue()
         self.start_time = datetime(year=wx_start_date.GetYear(), month=wx_start_date.GetMonth() + 1, day=wx_start_date.GetDay(),
-                                   hour=wx_start_time.GetHour(), minute=wx_start_time.GetMinute(), second=wx_start_time.GetSecond())
+                                   hour=wx_start_time.GetHour(), minute=wx_start_time.GetMinute(), second=wx_start_time.GetSecond(), tzinfo=timezone.utc)
 
         wx_end_date = self.end_datetime_edit.GetValue()
         wx_end_time = self.end_time_edit.GetValue()
         self.end_time = datetime(year=wx_end_date.GetYear(), month=wx_end_date.GetMonth() + 1, day=wx_end_date.GetDay(),
-                                 hour=wx_end_time.GetHour(), minute=wx_end_time.GetMinute(), second=wx_end_time.GetSecond())
+                                 hour=wx_end_time.GetHour(), minute=wx_end_time.GetMinute(), second=wx_end_time.GetSecond(), tzinfo=timezone.utc)
 
         if (self.interval_unit_idx == 0): #minutes
             self.interval = self.interval_spinbox.GetValue()
