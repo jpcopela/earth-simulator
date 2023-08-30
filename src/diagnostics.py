@@ -127,7 +127,7 @@ class AppDiagnostics():
                     #download a small amount of image data
                     download_manager = DownloadManager([satellite, neighbor])
                     download_manager.specify_channels([self.channels[neighbor], self.channels[neighbor]])
-                    download_manager.specify_start_end(datetime(2023, 1, 1, 0, 0), datetime(2023, 1, 1, 0, 10), 1)
+                    download_manager.specify_start_end(datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc), datetime(2023, 1, 1, 0, 10, tzinfo=timezone.utc), 1)
 
                     image_processor = ImageProcessor('')
                     composites = {satellite : self.channels[satellite], neighbor : self.channels[neighbor]}
