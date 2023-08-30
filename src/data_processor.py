@@ -258,6 +258,10 @@ class ImageProcessor():
         #and the available images in the project folder
         neighboring_satellites = self._get_neighboring_satellites(satellite)
         my_files = glob(self.project_folder + f'images/{satellite}/{self.resolution}/{satellite}*.png')
+
+        #remove any files that have already been blended
+        my_files = [i for i in my_files if 'blended' not in i]
+
         image_pairs = []
 
         for file in my_files:
@@ -265,6 +269,7 @@ class ImageProcessor():
             neighbor_files = []
 
             for neighbor in neighboring_satellites:
+                #this pattern excludes the blended images
                 neighbor_file = glob(self.project_folder + f'images/{neighbor}/{self.resolution}/{neighbor}_*_{str_timestamp}.png')
 
                 if (neighbor_file):
@@ -333,7 +338,10 @@ class ImageProcessor():
                             copy[mask] = blended_image[mask]
                             out_image = Image.fromarray(copy)
 
-                            out_image.save(my_image) #this is sub-optimal, but these images are better than the originals anyway
+                            filepath = self.project_folder + f'images/{satellite}/{self.resolution}/'
+                            out_name = filepath + 'blended_' + my_image.split('/')[-1]
+
+                            out_image.save(out_name)
                         
                     pbar.update(1)
 

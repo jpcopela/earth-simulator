@@ -192,17 +192,22 @@ class ImageBlender():
         my_dists = ImageBlender._haversine_distance(sat_lat0, sat_lon0, v_lats, v_lons)
         n_dists = ImageBlender._haversine_distance(sat_lat0, neighbor_lon0, v_lats, v_lons)
 
-        #clip max distance to center
         sat_dist = ImageBlender._haversine_distance(sat_lat0, sat_lon0, sat_lat0, np.array([neighbor_lon0]))[0]
+        max_distance = np.max(np.concatenate([my_dists, n_dists]))
+
+        #if the max distance extends beyond the satellite, set the max distance to the satellite distance
+        if (sat_dist < max_distance):
+            max_distance = sat_dist
+
         min_distance = np.min(np.concatenate([my_dists, n_dists]))
 
         #where the distance is less than the min distance, set the distance to the min distance
-        my_dists[n_dists > sat_dist] = min_distance
-        n_dists[my_dists > sat_dist] = min_distance
+        my_dists[n_dists > max_distance] = min_distance
+        n_dists[my_dists > max_distance] = min_distance
 
         #where the distance is greater than the max distance, set the distance to the max distance
-        n_dists[n_dists > sat_dist] = sat_dist
-        my_dists[my_dists > sat_dist] = sat_dist
+        n_dists[n_dists > max_distance] = max_distance
+        my_dists[my_dists > max_distance] = max_distance
 
         #normalize them
         norm_my_dist = my_dists / sat_dist 

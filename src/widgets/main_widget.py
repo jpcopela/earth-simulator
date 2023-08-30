@@ -90,3 +90,8 @@ class MainWindow(wx.Frame):
         folder = event.folder
         resolution = event.resolution
         self.opengl_canvas.handle_timelapse_click(satellites, folder, resolution)
+
+    def on_blend_image_click(self, event):
+        blend_images = event.blend_images
+
+        self.opengl_canvas.handle_blend_toggle(blend_images)

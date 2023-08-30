@@ -41,6 +41,8 @@ class OpenGLCanvas(glcanvas.GLCanvas):
         self.last_mouse_pos = None
         self.mouse_clicked = False
 
+        self.prefer_blend_images = False
+
         self.timer = wx.Timer(self)
 
         #bind the events
@@ -82,8 +84,12 @@ class OpenGLCanvas(glcanvas.GLCanvas):
 
         for satellite in satellites:
             path = project_folder + f'/images/{satellite}/{resolution}/'
-            images = glob(path + '*.png')
-            print(images)
+
+            if (self.prefer_blend_images):
+                images = glob(path + '*blended.png')
+            else:
+                images = glob(path + '*.png')
+
             image_files.extend(images)
 
         timestamps = []
@@ -115,6 +121,9 @@ class OpenGLCanvas(glcanvas.GLCanvas):
             self.gl.capture_image(self.width, self.height, self.timelapse_counter, i, project_folder)
 
         self.timelapse_counter += 1
+
+    def handle_blend_toggle(self, blend_images):
+        self.prefer_blend_images = blend_images
 
     #methods for interacting with the OpenGL scene
     def _on_key_down(self, event):

@@ -5,7 +5,7 @@ from src.download_manager import DownloadManager
 from src.data_processor import ImageProcessor
 from src.image_handler import ImageBlender
 
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 
 #check the data files in images/alpha_masks, images/blending_masks
@@ -94,7 +94,7 @@ class AppDiagnostics():
                     #download a small amount of image data
                     download_manager = DownloadManager([name])
                     download_manager.specify_channels([self.channels[name]])
-                    download_manager.specify_start_end(datetime(2023, 1, 1, 0, 0), datetime(2023, 1, 1, 0, 10), 1)
+                    download_manager.specify_start_end(datetime(2023, 1, 1, 0, 0, tzinfo=timezone.utc), datetime(2023, 1, 1, 0, 10, tzinfo=timezone.utc), 1)
 
                     image_processor = ImageProcessor('')
                     composite = {name : self.channels[name]}

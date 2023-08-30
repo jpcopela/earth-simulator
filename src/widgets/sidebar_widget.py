@@ -69,6 +69,11 @@ class SliderChangeEvent(wx.PyCommandEvent):
         super().__init__(evtType, id)
         self.value = value
 
+class BlendImagesToggleEvent(wx.PyCommandEvent):
+    def __init__(self, evtType, blend_images : bool, id=wx.ID_ANY):
+        super().__init__(evtType, id)
+        self.blend_images = blend_images
+
 
 #widget for the sidebar
 class SidebarWidget(wx.Panel):
@@ -84,6 +89,9 @@ class SidebarWidget(wx.Panel):
 
     myEVT_SLIDER_CHANGE = wx.NewEventType()
     EVT_SLIDER_CHANGE = wx.PyEventBinder(myEVT_SLIDER_CHANGE, 1)
+
+    myEVT_BLEND_IMAGES = wx.NewEventType()
+    EVT_BLEND_IMAGES = wx.PyEventBinder(myEVT_BLEND_IMAGES, 1)
 
     def __init__(self, parent, captured_output):
         wx.Panel.__init__(self, parent)
@@ -264,7 +272,7 @@ class SidebarWidget(wx.Panel):
         resolution_button = wx.Button(self, label="low_res")
         self.resolution = resolution_button.GetLabel()
         blend_images_toggle = wx.CheckBox(self, label="Apply blending?")
-        blend_images_toggle.SetValue(True)
+        blend_images_toggle.SetValue(False)
 
         process_button.Bind(wx.EVT_BUTTON, self.on_process_click)
         resolution_button.Bind(wx.EVT_BUTTON, self.on_resolution_click)
@@ -504,3 +512,5 @@ class SidebarWidget(wx.Panel):
     
     def on_blend_images_toggle(self, event):
         self.blend_images = event.IsChecked()
+
+        wx.PostEvent(self, BlendImagesToggleEvent(self.myEVT_BLEND_IMAGES, self.blend_images))
