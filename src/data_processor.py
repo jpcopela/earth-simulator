@@ -3,6 +3,7 @@ from satpy import Scene
 from satpy import find_files_and_readers
 from satpy.modifiers import angles
 from satpy.resample import get_area_def
+from satpy import config
 from pyresample import create_area_def
 from glob import glob
 from PIL import Image
@@ -16,6 +17,7 @@ from tqdm import tqdm
 
 class ImageProcessor():
     def __init__(self, project_folder) -> None:
+        config.set(config_path=['satpy_configs/'])        
         self.project_folder = project_folder
         self.filenames = {}
 
@@ -179,7 +181,7 @@ class ImageProcessor():
                     for composite in composites:
                         timestamp = resampled_scn[composite].attrs['start_time'].strftime('%Y%m%d_%H%M')
                         
-                        if (not glob(output_file_name + f'_{composite}_{timestamp}.png')):
+                        if (not glob(output_file_name + f'_{composite}_{timestamp}.{extension}')):
                             tqdm.set_description(pbar, f'Processing {satellite} at {timestamp}.')
 
                             try:
@@ -222,12 +224,20 @@ class ImageProcessor():
                     tqdm.set_description(pbar, f'Applying alpha mask to {file.split("/")[-1]}.')
                     img_arr = np.asarray(Image.open(file)).copy()
 
-                    alpha = np.where(img_arr[:, :, 3] != 0, alpha_vals, 0)
-                    img_arr[:, :, 3] = alpha
-                    
-                    image = Image.fromarray(img_arr)
-                    image.save(file)
+                    if (np.shape(img_arr)[2] == 4):
+                        alpha = np.where(img_arr[:, :, 3] != 0, alpha_vals, 0)
+                        img_arr[:, :, 3] = alpha
+                        
+                        image = Image.fromarray(img_arr)
+                        image.save(file)
 
+                    else:
+                        alpha = np.where(img_arr[:, :, 1] != 0, alpha_vals, 0)
+                        img_arr[:, :, 1] = alpha
+
+                        image = Image.fromarray(img_arr)
+                        image.save(file)
+                    
                     pbar.update(1)
 
     def _get_neighboring_satellites(self, satellite : str) -> list:
@@ -293,17 +303,22 @@ class ImageProcessor():
                             my_arr = np.asarray(Image.open(my_image))
                             n_arr = np.asarray(Image.open(neighbor_image))
 
-                            # Separate the original image into RGB and alpha channels
-                            rgb_channels = my_arr[:, :, :3]
-                            alpha_channel = my_arr[:, :, 3]
+                            num_channels = my_arr.shape[2] - 1
 
-                            other_rgb_channels = n_arr[:, :, :3]
+                            if (num_channels != n_arr.shape[2] - 1):
+                                raise ValueError('The number of channels in the images do not match.')
+
+                            # Separate the original image into RGB and alpha channels
+                            rgb_channels = my_arr[:, :, :num_channels]
+                            alpha_channel = my_arr[:, :, num_channels]
+
+                            other_rgb_channels = n_arr[:, :, :num_channels]
 
                             # Initialize an array to store the blended result
                             blended_result = np.zeros_like(rgb_channels)
 
                             # Perform blending for each channel separately
-                            for channel in range(3):
+                            for channel in range(num_channels):
                                 # Compute the blended pixel values
                                 blended_values = (weights * rgb_channels[:, :, channel] +
                                                 inv_weights * other_rgb_channels[target_x, target_y, channel])

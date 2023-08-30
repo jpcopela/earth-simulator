@@ -62,59 +62,12 @@ class DownloadManager():
             try:
                 eumetsat_token = eumdac.AccessToken(credentials)
             except requests.exceptions.HTTPError as error:
-                print(f"Error when tryng the request to the server: '{error}'")
+                print(f"Error when trying the request to the server: '{error}'")
 
             self.token = eumetsat_token
         
         self.buckets = buckets
         self.aws_prefixes = aws_prefixes
-        
-
-    def generate_channels(self, composites : dict):
-        #generate the required channels for the satellite based on the 
-        #desired image types (composites)
-        required_channels = []
-
-        for satellite in composites:
-            if ('himawari' in satellite):
-                temp_channels = []
-                
-                for composite in composites[satellite]:
-                    if ('natural_color' in composite):
-                        temp_channels.extend(['B02', 'B03', 'B04', 'B05'])
-                    elif ('true_color' in composite):
-                        temp_channels.extend(['B01', 'B02', 'B03', 'B04'])
-                    elif ('night_ir_alpha' in composite):
-                        temp_channels.extend(['B07', 'B13', 'B15'])
-                    else:
-                        #else, we are getting passed an individual channel
-                        temp_channels.extend(composite)
-
-                required_channels.append(temp_channels)
-
-            elif ('goes' in satellite):
-                temp_channels = []
-
-                for composite in composites[satellite]:
-                    if ('natural_color' in composite):
-                        temp_channels.extend(['C05', 'C02', 'C03'])
-                    elif ('true_color' in composite):
-                        temp_channels.extend(['C01', 'C02', 'C03'])
-                    elif ('night_ir_alpha' in composite):
-                        temp_channels.extend(['C07', 'C13', 'C15'])
-                    else:
-                        #else, we are getting passed an individual channel
-                        temp_channels.extend(composite)
-
-                required_channels.append(temp_channels)
-
-            elif ('meteosat' in composites[satellite]):
-                return None
-            
-            else:
-                raise ValueError('Invalid satellite option. Use "himawari", "goes_east", "goes_west", meteosat_10, or meteosat_9 instead.')
-            
-            self.channels = required_channels
 
     def specify_channels(self, channels : list) -> None:
         self.channels = channels
@@ -246,31 +199,30 @@ class DownloadManager():
         with tqdm(total=len(self.floored_times), desc=f'Gathering {satellite} files.') as pbar:
             for time in self.floored_times:
                 if ('goes' in satellite):
-                    #goes data beginning at <Hour>:00 is stored in the previous hour's folder
-                    if (time.strftime('%M') == '00'):
-                        corrected_time = time - timedelta(minutes=5) #subtract 5 minutes so we are in the previous hour now
-                        timestamp = corrected_time.strftime(f'{aws_prefix}/%Y/%j/%H/')
-                    else:
-                        timestamp = time.strftime(f'{aws_prefix}/%Y/%j/%H/')
+                    timestamp = time.strftime(f'{aws_prefix}/%Y/%j/%H/')
 
                 elif ('himawari' in satellite):
                     timestamp = time.strftime(f'{aws_prefix}/%Y/%m/%d/%H%M/')
 
-                for channel in channels:
-                    response = self.client.list_objects_v2(Bucket=bucket, Prefix=timestamp)
+                response = self.client.list_objects_v2(Bucket=bucket, Prefix=timestamp)
 
+                for channel in channels:
                     for content in response.get('Contents', []):
                         if ('himawari' in satellite):
                             if (channel in content['Key'] and time.strftime('%H%M') in content['Key']):
                                 channel_files.append(content['Key'])
                         
+                        #unfortunately we must use the 'LastModified' attribute for goes because the minute timestamp is not in the filename
                         elif ('goes' in satellite):
-                            if (channel in content['Key'] and (time >= content['LastModified'] - timedelta(minutes=2) and time <= content['LastModified'] + timedelta(minutes=2))):
+                            content_corrected_time = (content['LastModified'] - timedelta(minutes=10)) #the actual time is 10 minutes before the files are uploaded 
+                            if (channel in content['Key'] and time <= (content_corrected_time + timedelta(minutes=1))
+                                and time >= (content_corrected_time - timedelta(minutes=1))):
                                 channel_files.append(content['Key'])
                 
                 pbar.update()
 
-        return channel_files
+        #remove duplicates
+        return list(dict.fromkeys(channel_files))
 
     def _decompress_file(file, pbar=None):
         with bz2.open(file, 'rb') as f_in:

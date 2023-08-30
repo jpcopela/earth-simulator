@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import os
 from src.download_manager import DownloadManager
 from src.data_processor import ImageProcessor
+from src.composite_helper import CompositeHelper
 
 from threading import Thread, Lock
 import sys
@@ -91,15 +92,24 @@ class SidebarWidget(wx.Panel):
         sys.stdout = captured_output
         sys.stderr = captured_output
         self.captured_output = captured_output
+
+        self.composite_helpers = {
+            "GOES-16": CompositeHelper('satpy_configs/composites/abi.yaml'),
+            "GOES-18": CompositeHelper('satpy_configs/composites/abi.yaml'),
+            "Himawari-9": CompositeHelper('satpy_configs/composites/ahi.yaml'),
+            "Meteosat-9": CompositeHelper('satpy_configs/composites/seviri.yaml'),
+            "Meteosat-10": CompositeHelper('satpy_configs/composites/seviri.yaml'),
+        }
         
         #initialize important variables
         self.satellite_composites = {
-            "GOES-16": ["true_color", "natural_color", "night_ir_alpha"],
-            "GOES-18": ["true_color", "natural_color", "night_ir_alpha"],
-            "Himawari-9": ["true_color", "natural_color", "night_ir_alpha"],
-            "Meteosat-9": ["natural_color", "night_ir_alpha"],
-            "Meteosat-10": ["natural_color", "night_ir_alpha"],
+            "GOES-16": CompositeHelper('satpy_configs/composites/abi.yaml').get_available_composites(),
+            "GOES-18": CompositeHelper('satpy_configs/composites/abi.yaml').get_available_composites(),
+            "Himawari-9": CompositeHelper('satpy_configs/composites/ahi.yaml').get_available_composites(),
+            "Meteosat-9": CompositeHelper('satpy_configs/composites/seviri.yaml').get_available_composites(),
+            "Meteosat-10": CompositeHelper('satpy_configs/composites/seviri.yaml').get_available_composites(),
         }
+
         self.selected_satellites = []
         self.selected_composites = {}
         self.selected_images = {}
@@ -433,8 +443,20 @@ class SidebarWidget(wx.Panel):
 
         if (self.interval and self.start_time and self.end_time and self.selected_composites):
             download_manager = DownloadManager(names)
-            download_manager.generate_channels(composites)
+            channels = []
+
+            for satellite in self.selected_satellites:
+                helper = self.composite_helpers[satellite]
+                sat_channels = []
+
+                for composite in self.selected_composites[satellite]:
+                    sat_channels.extend(helper.get_composite_channels(composite))
+
+                sat_channels = list(dict.fromkeys(sat_channels))
+                channels.append(sat_channels)
+            
             download_manager.specify_start_end(self.start_time, self.end_time, self.interval)
+            download_manager.specify_channels(channels)
             
             try:
                 download_thread = DownloadWorker(self, download_manager, selected_folder + '/')

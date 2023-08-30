@@ -83,6 +83,7 @@ class OpenGLCanvas(glcanvas.GLCanvas):
         for satellite in satellites:
             path = project_folder + f'/images/{satellite}/{resolution}/'
             images = glob(path + '*.png')
+            print(images)
             image_files.extend(images)
 
         timestamps = []
