@@ -86,9 +86,10 @@ class OpenGLCanvas(glcanvas.GLCanvas):
             path = project_folder + f'/images/{satellite}/{resolution}/'
 
             if (self.prefer_blend_images):
-                images = glob(path + '*blended.png')
+                images = glob(path + 'blended*.png')
             else:
                 images = glob(path + '*.png')
+                images = [i for i in images if 'blended' not in i]
 
             image_files.extend(images)
 
