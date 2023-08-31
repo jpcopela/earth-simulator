@@ -35,6 +35,7 @@ class MainWindow(wx.Frame):
         self.sidebar.Bind(SidebarWidget.EVT_IMAGE_SELECTION, self.on_images_selected)
         self.sidebar.Bind(SidebarWidget.EVT_SLIDER_CHANGE, self.on_slider_value_changed)
         self.sidebar.Bind(SidebarWidget.EVT_TIMELAPSE_CLICK, self.on_timelapse_click)
+        self.sidebar.Bind(SidebarWidget.EVT_BLEND_IMAGES, self.on_blend_image_click)
 
         self.Centre()
         self.Show()
