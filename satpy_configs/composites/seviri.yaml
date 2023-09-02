@@ -183,6 +183,13 @@ composites:
       modifiers: [sunz_corrected]
     standard_name: natural_color
 
+  natural_enh_day:
+    compositor: !!python/name:satpy.composites.DayNightCompositor
+    day_night: day_only
+    prerequisites:
+    - name: natural_enh
+    standard_name: natural_enh_day
+
   natural_color_nocorr:
     compositor: !!python/name:satpy.composites.GenericCompositor
     prerequisites:

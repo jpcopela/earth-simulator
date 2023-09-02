@@ -15,8 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 
 #eumetsat credentials
-key = 'your_key'
-secret = 'your_secret'
+key = 'your_key_here'
+secret = 'your_secret_here'
 
 #DownloadManager class has attributes for the satellites to be downloaded, the start and end times,
 #and the interval between downloads. These are initialized by the user using the GUI.
@@ -36,10 +36,10 @@ class DownloadManager():
                     bucket = 'noaa-goes16'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'goes_west':
-                    bucket = 'noaa-goes18'
+                    bucket = 'noaa-goes17'
                     aws_prefix = 'ABI-L1b-RadF'
                 case 'himawari':
-                    bucket = 'noaa-himawari9'
+                    bucket = 'noaa-himawari8'
                     aws_prefix = 'AHI-L1b-FLDK'
                 case 'meteosat_9':
                     bucket = None
@@ -71,6 +71,7 @@ class DownloadManager():
 
     def specify_channels(self, channels : list) -> None:
         self.channels = channels
+        print(channels)
 
     def specify_start_end(self, start : datetime, end : datetime, interval_minutes : int) -> None:
         #data are generally stored in 10 minute intervals
@@ -155,7 +156,7 @@ class DownloadManager():
                         self.client.download_file(bucket, files[i], local_ch_filenames[i])
                     except:
                         print(f'Failed to download {files[i]}')
-                        #remove_files.append(local_ch_filenames[i])
+                        remove_files.append(local_ch_filenames[i])
                 
                 else:
                     print(f'{filename} already exists.')
@@ -215,8 +216,8 @@ class DownloadManager():
                         #unfortunately we must use the 'LastModified' attribute for goes because the minute timestamp is not in the filename
                         elif ('goes' in satellite):
                             content_corrected_time = (content['LastModified'] - timedelta(minutes=10)) #the actual time is 10 minutes before the files are uploaded 
-                            if (channel in content['Key'] and time <= (content_corrected_time + timedelta(minutes=1))
-                                and time >= (content_corrected_time - timedelta(minutes=1))):
+                            if (channel in content['Key'] and time <= (content_corrected_time + timedelta(minutes=2))
+                                and time >= (content_corrected_time - timedelta(minutes=2))):
                                 channel_files.append(content['Key'])
                 
                 pbar.update()

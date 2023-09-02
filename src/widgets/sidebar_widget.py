@@ -121,7 +121,7 @@ class SidebarWidget(wx.Panel):
         self.selected_satellites = []
         self.selected_composites = {}
         self.selected_images = {}
-        self.blend_images = True
+        self.blend_images = False
 
         #initialize button/toggle variables
         self.interval_unit_idx = 0

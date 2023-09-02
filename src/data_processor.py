@@ -252,6 +252,8 @@ class ImageProcessor():
                 return ['goes_east', 'himawari']
             case 'meteosat_10':
                 return ['meteosat_9', 'goes_east']
+            case 'meteosat_9':
+                return ['himawari', 'meteosat_10']
 
     def _get_image_pairs(self, satellite : str) -> list:
         #get the image pairs based on the neighboring satellites
