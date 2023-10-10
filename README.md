@@ -19,6 +19,16 @@ Currently you must manually change satellite names for GOES West and Himawari-9 
 On Ubuntu you must run the following command before running the script:
 `export PYOPENGL_PLATFORM='egl'`
 
+To create timelapses from images generated using the timelapse button, you can use ffmpeg. To create an initial video, run:  
+`cat $(find timelapse_0 -maxdepth 1 -name "*.png" | sort -V) | ffmpeg -framerate 3 -i - out.mp4`  
+
+This will create a 3 frames per second video with all the images from the timelapse_0 folder, which can be found in the same directory your satellite images are in. To increase the framerate and blend the frames, run:  
+`ffmpeg -i out.mp4 -vf framerate=fps=20 out_blended.mp4`  
+
+For more info, see: https://askubuntu.com/questions/1183076/convert-all-the-png-files-in-a-folder-to-video
+
+
+
 # Future Improvements
 * Add support for more satellites, including polar orbiting ones
 * Improve the UI so the app is easier and more intuitive to use
